@@ -6,12 +6,15 @@ const tokens = (n) => {
 }
 
 describe('Token', () => {
-    let token
-
+    let token , accounts, deployer
+    
     beforeEach(async () => {
         // fetch Token from Blockchain
         const Token = await ethers.getContractFactory('Token')
         token = await Token.deploy('Psichedelic', 'PSI' , '1000000')
+
+        accounts = await ethers.getSigners()
+        deployer = accounts[0];
     })
     describe('Deployment' , () => {
      const name = 'Psichedelic'
@@ -37,6 +40,11 @@ describe('Token', () => {
         // check it has correct decimals
         
           expect(await token.totalSupply()).to.equal(totalSupply)
+    })
+    it('assigns total supply to deployer', async () => {
+        // check it has correct decimals
+        
+          expect(await token.balanceOf(deployer.address)).to.equal(totalSupply)
     })
 
 })
