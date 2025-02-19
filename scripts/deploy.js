@@ -5,28 +5,35 @@
 // will compile your contracts, add the Hardhat Runtime Environment's members to the
 // global scope, and execute the script.
 const hre = require("hardhat");
-
+const IMAGE_URI = "https://green-defiant-crayfish-409.mypinata.cloud/ipfs/bafkreidfj3htoibxsdekmvwelv4g72y7vk4ffaomtgzl2wcab7q5xhpyqm";
 async function main() {
-  const currentTimestampInSeconds = Math.round(Date.now() / 1000);
-  const unlockTime = currentTimestampInSeconds + 60;
+  const [deployer] = await hre.ethers.getSigners();
 
-  const lockedAmount = hre.ethers.parseEther("0.001");
+  console.log("Deploying contracts with the account:", deployer.address);
 
-  const lock = await hre.ethers.deployContract("Lock", [unlockTime], {
-    value: lockedAmount,
-  });
+  // Deploy Token
+  const Token = await hre.ethers.getContractFactory("Token");
+  const token = await Token.deploy("Psichedelic", "PSI", "1000000", IMAGE_URI);
+  await token.waitForDeployment();
+  console.log("Token deployed to:", token.target);
 
-  await lock.waitForDeployment();
+  // Deploy Bridge
+  const L2Bridge = await hre.ethers.getContractFactory("L2Bridge");
+  const bridge = await L2Bridge.deploy(token.target);
+  await bridge.waitForDeployment();
+  console.log("Bridge deployed to:", bridge.target);
 
-  console.log(
-    `Lock with ${ethers.formatEther(
-      lockedAmount
-    )}ETH and unlock timestamp ${unlockTime} deployed to ${lock.target}`
-  );
+  // Initialize bridge in Token contract
+  const initializeTx = await token.initializeBridge(bridge.target);
+  await initializeTx.wait();
+  console.log("Bridge initialized in Token contract");
+
+  // Verification info
+  console.log("\nDeployment completed successfully!");
+  console.log("Token address:", token.target);
+  console.log("Bridge address:", bridge.target);
 }
 
-// We recommend this pattern to be able to use async/await everywhere
-// and properly handle errors.
 main().catch((error) => {
   console.error(error);
   process.exitCode = 1;
